@@ -55,7 +55,7 @@ export async function uploadTarot(userId: string, uri: string): Promise<string> 
     .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
   if (error) throw error;
   const { data } = supabase.storage.from('tarot').getPublicUrl(path);
-  return data.publicUrl;
+  return `${data.publicUrl}?t=${Date.now()}`;
 }
 
 export function subscribeHome(userId: string, onChange: () => void): () => void {

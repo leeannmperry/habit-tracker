@@ -8,22 +8,31 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography } from '../theme';
-import { HomeData, loadHome, saveHome } from '../store/home';
+import { HomeData, loadHome, saveHome, uploadTarot, subscribeHome } from '../store/home';
+import { useAuth } from '../context/AuthContext';
 
-export default function HomeScreen() {
+interface Props { userId: string; }
+
+export default function HomeScreen({ userId }: Props) {
+  const { signOut } = useAuth();
   const [data, setData] = useState<HomeData>({
     tarotUri: null,
     intentions: { work: '', life: '', creative: '' },
   });
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { loadHome().then(setData); }, []);
+  useEffect(() => {
+    loadHome(userId).then(setData);
+    return subscribeHome(userId, () => { loadHome(userId).then(setData); });
+  }, [userId]);
 
   const persist = (next: HomeData) => {
     setData(next);
-    saveHome(next);
+    saveHome(userId, next);
   };
 
   const pickTarot = async () => {
@@ -31,14 +40,15 @@ export default function HomeScreen() {
       mediaTypes: ['images'],
       allowsEditing: false,
       quality: 0.7,
-      base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      const uri = asset.base64
-        ? `data:image/jpeg;base64,${asset.base64}`
-        : asset.uri;
-      persist({ ...data, tarotUri: uri });
+      setUploading(true);
+      try {
+        const url = await uploadTarot(userId, result.assets[0].uri);
+        persist({ ...data, tarotUri: url });
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -48,9 +58,11 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
-      <TouchableOpacity onPress={pickTarot} style={styles.tarotWrap}>
+      <TouchableOpacity onPress={pickTarot} style={styles.tarotWrap} disabled={uploading}>
         <View style={styles.tarotBox}>
-          {data.tarotUri ? (
+          {uploading ? (
+            <ActivityIndicator color={Colors.ink3} />
+          ) : data.tarotUri ? (
             <>
               <Image
                 source={{ uri: data.tarotUri }}
@@ -87,6 +99,10 @@ export default function HomeScreen() {
           </View>
         ))}
       </View>
+
+      <TouchableOpacity onPress={signOut} style={styles.signOut}>
+        <Text style={styles.signOutText}>sign out</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -150,5 +166,13 @@ const styles = StyleSheet.create({
     color: Colors.ink,
     minHeight: 48,
     lineHeight: 21,
+  },
+
+  signOut: { marginTop: 24, alignSelf: 'center' },
+  signOutText: {
+    fontFamily: 'Georgia',
+    fontSize: 11,
+    color: Colors.ink4,
+    textDecorationLine: 'underline',
   },
 });

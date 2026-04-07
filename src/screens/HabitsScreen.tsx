@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Colors, HabitSwatches, Typography } from '../theme';
-import { Habit, CompletionValue, loadHabits, saveHabits, createHabit } from '../store/habits';
+import { Habit, CompletionValue, loadHabits, saveHabits, subscribeHabits, createHabit } from '../store/habits';
 import { getCurrentStreak, getBestStreak } from '../utils/streaks';
 
 const MONTH_NAMES = [
@@ -530,7 +530,9 @@ function MonthCalendarBlock({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function HabitsScreen() {
+interface HabitsScreenProps { userId: string; }
+
+export default function HabitsScreen({ userId }: HabitsScreenProps) {
   const now = new Date();
   const { width } = useWindowDimensions();
   const isMobile = width < 640;
@@ -541,12 +543,15 @@ export default function HabitsScreen() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [subtypeModal, setSubtypeModal] = useState<{ hi: number; key: string } | null>(null);
 
-  useEffect(() => { loadHabits().then(setHabits); }, []);
+  useEffect(() => {
+    loadHabits(userId).then(setHabits);
+    return subscribeHabits(userId, () => { loadHabits(userId).then(setHabits); });
+  }, [userId]);
 
   const persist = useCallback((next: Habit[]) => {
     setHabits(next);
-    saveHabits(next);
-  }, []);
+    saveHabits(userId, next);
+  }, [userId]);
 
   const days = daysInMonth(viewYear, viewMonth);
   const today = new Date();

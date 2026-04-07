@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Colors, Typography } from '../theme';
-import { Task, Domain, loadTasks, saveTasks, createTask, getNextMidnight } from '../store/tasks';
+import { Task, Domain, loadTasks, saveTasks, subscribeTasks, createTask, getNextMidnight } from '../store/tasks';
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -357,27 +357,34 @@ function TaskModal({ task, domain, allTasks, visible, onSave, onDelete, onClose 
 
 interface Props {
   domain: Domain;
+  userId: string;
 }
 
-export default function TodoScreen({ domain }: Props) {
+export default function TodoScreen({ domain, userId }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskModal, setTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [reorderingTaskId, setReorderingTaskId] = useState<number | null>(null);
 
-  useEffect(() => { loadTasks().then(setTasks); }, [domain]);
+  useEffect(() => {
+    loadTasks(userId).then(setTasks);
+    return subscribeTasks(userId, () => { loadTasks(userId).then(setTasks); });
+  }, [userId]);
+
+  // Re-load when switching domains (data already in state, this keeps it fresh)
+  useEffect(() => { loadTasks(userId).then(setTasks); }, [domain]);
 
   // Auto-prune done tasks at midnight
   useEffect(() => {
     const ms = getNextMidnight() - Date.now();
-    const timer = setTimeout(() => { loadTasks().then(setTasks); }, ms);
+    const timer = setTimeout(() => { loadTasks(userId).then(setTasks); }, ms);
     return () => clearTimeout(timer);
-  }, []);
+  }, [userId]);
 
   const persist = useCallback((next: Task[]) => {
     setTasks(next);
-    saveTasks(next);
-  }, []);
+    saveTasks(userId, next);
+  }, [userId]);
 
   const openEdit = (task: Task) => {
     setEditingTask(task);

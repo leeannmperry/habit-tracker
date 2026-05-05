@@ -3,14 +3,14 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { Colors, Typography } from '../theme';
 import { getCurrentRune } from '../utils/rune';
 
-export type TabName = 'HOME' | 'HABITS' | 'WORK' | 'LIFE' | 'CREATIVE';
+export type TabName = 'HOME' | 'HABITS' | 'TAGS' | 'WORK' | 'LIFE' | 'CREATIVE';
 
 interface Props {
   active: TabName;
   onSelect: (tab: TabName) => void;
 }
 
-const TABS: TabName[] = ['HOME', 'HABITS', 'WORK', 'LIFE', 'CREATIVE'];
+const TABS: TabName[] = ['HOME', 'HABITS', 'TAGS', 'WORK', 'LIFE', 'CREATIVE'];
 
 const OWNER = process.env.EXPO_PUBLIC_OWNER_NAME ?? '';
 

@@ -18,13 +18,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
+    // Use a flag so whichever resolves first — onAuthStateChange INITIAL_SESSION
+    // or getSession() — clears the loading state exactly once.
+    let settled = false;
+
+    const settle = (s: Session | null) => {
       setSession(s);
+      if (!settled) { settled = true; setLoading(false); }
+    };
+
+    // onAuthStateChange fires INITIAL_SESSION synchronously on some platforms
+    // before getSession() resolves, so it can be the faster path.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'INITIAL_SESSION') {
+        settle(s);
+      } else {
+        setSession(s);
+      }
     });
+
+    // getSession() is the authoritative check; always finishes loading even if
+    // the storage layer throws (e.g. incognito cookie restrictions).
+    supabase.auth.getSession()
+      .then(({ data }) => settle(data.session))
+      .catch(() => settle(null));
+
     return () => subscription.unsubscribe();
   }, []);
 

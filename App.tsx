@@ -6,6 +6,7 @@ import { migrateFromAsyncStorage } from './src/lib/migrate';
 import TopTabBar, { TabName } from './src/components/TopTabBar';
 import HomeScreen from './src/screens/HomeScreen';
 import HabitsScreen from './src/screens/HabitsScreen';
+import TagsScreen from './src/screens/TagsScreen';
 import TodoScreen from './src/screens/TodoScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import { Colors } from './src/theme';
@@ -36,7 +37,7 @@ function AppInner() {
     return <View style={styles.loading} />;
   }
 
-  if (!session) {
+  if (!session || !userId) {
     return <AuthScreen />;
   }
 
@@ -47,6 +48,7 @@ function AppInner() {
       <View style={styles.screen}>
         {tab === 'HOME' && <HomeScreen userId={userId!} />}
         {tab === 'HABITS' && <HabitsScreen userId={userId!} />}
+        {tab === 'TAGS' && <TagsScreen userId={userId!} />}
         {tab === 'WORK' && <TodoScreen domain="work" userId={userId!} />}
         {tab === 'LIFE' && <TodoScreen domain="life" userId={userId!} />}
         {tab === 'CREATIVE' && <TodoScreen domain="creative" userId={userId!} />}

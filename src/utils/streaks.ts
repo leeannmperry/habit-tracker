@@ -16,9 +16,16 @@ function getMondayOfWeek(date: Date): Date {
 export function getCurrentStreak(habit: Habit): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  let streak = 0;
-  const cursor = new Date(today);
+  const todayKey = toDateString(today);
 
+  // If today is already completed, start counting from today.
+  // If not, start from yesterday so an incomplete present day doesn't break the streak.
+  const cursor = new Date(today);
+  if (!habit.completions[todayKey]) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  let streak = 0;
   while (true) {
     const key = toDateString(cursor);
     if (habit.completions[key]) {

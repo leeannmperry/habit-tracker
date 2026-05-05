@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,23 +7,41 @@ import {
   Image,
   StyleSheet,
   ScrollView,
+  Modal,
+  FlatList,
   Platform,
   ActivityIndicator,
+  Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Typography } from '../theme';
 import { HomeData, loadHome, saveHome, uploadTarot, subscribeHome } from '../store/home';
 import { useAuth } from '../context/AuthContext';
+import { TAROT_CARDS, getCardById } from '../utils/tarotCards';
+
+// Hoisted to avoid new object/component refs on every render
+const COLS = 3;
+const MODAL_PADDING = 16;
+const GAP = 8;
+const GRID_COL_WRAPPER = { gap: GAP };
+const GridSeparator = () => <View style={{ height: GAP }} />;
 
 interface Props { userId: string; }
 
 export default function HomeScreen({ userId }: Props) {
   const { signOut } = useAuth();
+  const { width } = useWindowDimensions();
+  const thumbW = (Math.min(width, 480) - MODAL_PADDING * 2 - GAP * (COLS - 1)) / COLS;
+  const thumbH = thumbW * (19 / 11);
+
   const [data, setData] = useState<HomeData>({
     tarotUri: null,
+    tarotCard: null,
     intentions: { work: '', life: '', creative: '' },
   });
   const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     loadHome(userId).then(setData);
@@ -35,7 +53,13 @@ export default function HomeScreen({ userId }: Props) {
     saveHome(userId, next);
   };
 
-  const pickTarot = async () => {
+  const selectBundledCard = (cardId: string) => {
+    setPickerOpen(false);
+    persist({ ...data, tarotCard: cardId, tarotUri: null });
+  };
+
+  const pickCustom = async () => {
+    setPickerOpen(false);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
@@ -45,7 +69,7 @@ export default function HomeScreen({ userId }: Props) {
       setUploading(true);
       try {
         const url = await uploadTarot(userId, result.assets[0].uri);
-        persist({ ...data, tarotUri: url });
+        persist({ ...data, tarotUri: url, tarotCard: null });
       } finally {
         setUploading(false);
       }
@@ -56,16 +80,46 @@ export default function HomeScreen({ userId }: Props) {
     persist({ ...data, intentions: { ...data.intentions, [key]: value } });
   };
 
+  // Resolve image source
+  const bundledCard = data.tarotCard ? getCardById(data.tarotCard) : null;
+  const imageSource = bundledCard
+    ? bundledCard.source
+    : data.tarotUri
+      ? { uri: data.tarotUri }
+      : null;
+
+  const renderCard = useCallback(({ item }: { item: typeof TAROT_CARDS[number] }) => {
+    const selected = data.tarotCard === item.id;
+    return (
+      <TouchableOpacity
+        onPress={() => selectBundledCard(item.id)}
+        style={[
+          styles.thumb,
+          { width: thumbW, height: thumbH },
+          selected && styles.thumbSelected,
+        ]}
+      >
+        <Image source={item.source} style={styles.thumbImg} resizeMode="cover" />
+        <Text style={styles.thumbName} numberOfLines={1}>{item.name}</Text>
+      </TouchableOpacity>
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.tarotCard, thumbW, thumbH]);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
-      <TouchableOpacity onPress={pickTarot} style={styles.tarotWrap} disabled={uploading}>
+      <TouchableOpacity
+        onPress={() => setPickerOpen(true)}
+        style={styles.tarotWrap}
+        disabled={uploading}
+      >
         <View style={styles.tarotBox}>
           {uploading ? (
             <ActivityIndicator color={Colors.ink3} />
-          ) : data.tarotUri ? (
+          ) : imageSource ? (
             <>
               <Image
-                source={{ uri: data.tarotUri }}
+                source={imageSource}
                 style={[
                   styles.tarotImg,
                   Platform.OS === 'web'
@@ -79,7 +133,7 @@ export default function HomeScreen({ userId }: Props) {
               )}
             </>
           ) : (
-            <Text style={styles.uploadHint}>tap to{'\n'}upload</Text>
+            <Text style={styles.uploadHint}>tap to{'\n'}choose</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -103,6 +157,38 @@ export default function HomeScreen({ userId }: Props) {
       <TouchableOpacity onPress={signOut} style={styles.signOut}>
         <Text style={styles.signOutText}>sign out</Text>
       </TouchableOpacity>
+
+      {/* Card picker modal */}
+      <Modal
+        visible={pickerOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)} />
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>CHOOSE CARD</Text>
+            <TouchableOpacity onPress={() => setPickerOpen(false)}>
+              <Text style={styles.sheetClose}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={TAROT_CARDS}
+            keyExtractor={item => item.id}
+            numColumns={COLS}
+            contentContainerStyle={styles.grid}
+            columnWrapperStyle={GRID_COL_WRAPPER}
+            ItemSeparatorComponent={GridSeparator}
+            renderItem={renderCard}
+          />
+
+          <TouchableOpacity onPress={pickCustom} style={styles.customBtn}>
+            <Text style={styles.customBtnText}>UPLOAD CUSTOM IMAGE</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -174,5 +260,79 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.ink4,
     textDecorationLine: 'underline',
+  },
+
+  // Modal
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  sheet: {
+    backgroundColor: Colors.bg,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    maxHeight: '80%',
+    paddingBottom: 24,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.bg2,
+  },
+  sheetTitle: {
+    ...Typography.sectionLabel,
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
+  sheetClose: {
+    fontFamily: 'Georgia',
+    fontSize: 22,
+    color: Colors.ink3,
+    lineHeight: 24,
+  },
+  grid: {
+    padding: 16,
+  },
+  thumb: {
+    borderRadius: 4,
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: Colors.bg2,
+    backgroundColor: Colors.bg3,
+  },
+  thumbSelected: {
+    borderColor: Colors.ink,
+    borderWidth: 1.5,
+  },
+  thumbImg: {
+    flex: 1,
+    width: '100%',
+  },
+  thumbName: {
+    fontFamily: 'Georgia',
+    fontSize: 9,
+    color: Colors.ink3,
+    textAlign: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 2,
+    backgroundColor: Colors.bg,
+  },
+  customBtn: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    paddingVertical: 12,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.bg2,
+    alignItems: 'center',
+  },
+  customBtnText: {
+    ...Typography.sectionLabel,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: Colors.ink3,
   },
 });

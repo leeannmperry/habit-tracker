@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
 
   sub: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingVertical: 4, paddingLeft: 22,
+    paddingVertical: 4, paddingLeft: 48,
     borderBottomWidth: 0.5, borderBottomColor: Colors.bg2,
   },
   sck: { width: 10, height: 10, borderWidth: 1, borderColor: Colors.ink4, borderRadius: 2, flexShrink: 0 },
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5, borderColor: Colors.bg2, borderRadius: 5,
     fontFamily: 'Georgia', fontSize: 12, backgroundColor: Colors.bg, color: Colors.ink,
   },
-  rewardField: { backgroundColor: Colors.acc, color: Colors.bg },
+  rewardField: {},
   textarea: { height: 52, textAlignVertical: 'top' },
   projBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   projBtn: { paddingVertical: 4, paddingHorizontal: 9, borderWidth: 0.5, borderColor: Colors.bg2, borderRadius: 4 },

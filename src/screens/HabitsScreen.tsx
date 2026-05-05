@@ -289,7 +289,9 @@ function HabitRow({
       const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
       if (habit.completions[k]) { tmp++; b = Math.max(b, tmp); } else tmp = 0;
     }
-    for (let i = 0; i < 365; i++) {
+    const todayK = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+    const startI = habit.completions[todayK] ? 0 : 1;
+    for (let i = startI; i < 365; i++) {
       const d = new Date(today); d.setDate(today.getDate() - i);
       const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
       if (habit.completions[k]) cur++; else break;
@@ -681,7 +683,7 @@ export default function HabitsScreen({ userId }: HabitsScreenProps) {
             const { cur: streak, best } = (() => {
               const today = new Date(); let cur = 0, b = 0, tmp = 0;
               for (let i = 364; i >= 0; i--) { const d = new Date(today); d.setDate(today.getDate() - i); const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate()); if (habit.completions[k]) { tmp++; b = Math.max(b, tmp); } else tmp = 0; }
-              for (let i = 0; i < 365; i++) { const d = new Date(today); d.setDate(today.getDate() - i); const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate()); if (habit.completions[k]) cur++; else break; }
+              const todayK = dateKey(today.getFullYear(), today.getMonth(), today.getDate()); const startI = habit.completions[todayK] ? 0 : 1; for (let i = startI; i < 365; i++) { const d = new Date(today); d.setDate(today.getDate() - i); const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate()); if (habit.completions[k]) cur++; else break; }
               return { cur, best: b };
             })();
             const progress = (() => {

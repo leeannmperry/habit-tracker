@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase';
 
 export interface HomeData {
-  tarotUri: string | null;
+  tarotUri: string | null;   // custom uploaded image URL
+  tarotCard: string | null;  // bundled card id (e.g. "magician")
   intentions: {
     work: string;
     life: string;
@@ -11,6 +12,7 @@ export interface HomeData {
 
 const DEFAULT: HomeData = {
   tarotUri: null,
+  tarotCard: null,
   intentions: { work: '', life: '', creative: '' },
 };
 
@@ -25,8 +27,12 @@ export async function loadHome(userId: string): Promise<HomeData> {
     .eq('user_id', userId)
     .maybeSingle();
   if (!data) return DEFAULT;
+  const rawUrl: string | null = data.tarot_url ?? null;
+  const tarotCard = rawUrl?.startsWith('bundled:') ? rawUrl.slice(8) : null;
+  const tarotUri = rawUrl && !tarotCard ? rawUrl : null;
   return {
-    tarotUri: data.tarot_url ?? null,
+    tarotUri,
+    tarotCard,
     intentions: {
       work: data.intention_work ?? '',
       life: data.intention_life ?? '',
@@ -37,9 +43,12 @@ export async function loadHome(userId: string): Promise<HomeData> {
 
 export async function saveHome(userId: string, data: HomeData): Promise<void> {
   _skipNext = true;
+  const tarotUrl = data.tarotCard
+    ? `bundled:${data.tarotCard}`
+    : data.tarotUri ?? null;
   await supabase.from('home').upsert({
     user_id: userId,
-    tarot_url: data.tarotUri,
+    tarot_url: tarotUrl,
     intention_work: data.intentions.work,
     intention_life: data.intentions.life,
     intention_creative: data.intentions.creative,

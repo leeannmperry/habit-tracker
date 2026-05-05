@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Ritual Tracker",
+    "name": "Ritual",
     "slug": "ritual-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f7f0eb"
+      "backgroundColor": "#3a3835"
     },
     "ios": {
       "supportsTablet": true
@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#f7f0eb"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
